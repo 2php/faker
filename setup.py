@@ -10,7 +10,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = io.open(os.path.join(here, 'README.rst'), encoding="utf8").read()
 
 
-version = '0.7.17'
+version = '0.8.0'
 
 # this module can be zip-safe if the zipimporter implements iter_modules or if
 # pkgutil.iter_importer_modules has registered a dispatch for the zipimporter.
@@ -60,8 +60,10 @@ setup(
     test_suite='tests',
     zip_safe=zip_safe,
     install_requires=[
+        "email_validator>=1.0.2",
         "python-dateutil>=2.4",
         "six",
+        "ukpostcodeparser>=1.1.1",
     ],
     extras_require={
         ':python_version=="2.7"': [

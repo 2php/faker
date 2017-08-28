@@ -9,7 +9,8 @@ from faker import Faker
 from faker.providers.company.hu_HU import Provider as HuProvider
 from faker.providers.company.ja_JP import Provider as JaProvider
 from faker.providers.company.pt_BR import Provider as PtProvider, company_id_checksum
-from faker.providers.company.pl_PL import Provider as PlProvider, regon_checksum
+from faker.providers.company.pl_PL import (Provider as PlProvider, regon_checksum, local_regon_checksum,
+                                           company_vat_checksum)
 from .. import string_types
 
 
@@ -44,11 +45,11 @@ class TestPtBR(unittest.TestCase):
 
     def test_pt_BR_company_id(self):
         for _ in range(100):
-            self.assertTrue(re.search(r'^\d{14}$', PtProvider.company_id()))
+            self.assertTrue(re.search(r'^\d{14}$', self.factory.company_id()))
 
     def test_pt_BR_cnpj(self):
         for _ in range(100):
-            cnpj = PtProvider.cnpj()
+            cnpj = self.factory.cnpj()
             self.assertTrue(re.search(r'\d{2}\.\d{3}\.\d{3}/0001-\d{2}', cnpj))
 
 
@@ -84,4 +85,26 @@ class TestPlPL(unittest.TestCase):
 
     def test_regon(self):
         for _ in range(100):
-            self.assertTrue(re.search(r'^\d{9}$', PlProvider.regon()))
+            self.assertTrue(re.search(r'^\d{9}$', self.factory.regon()))
+
+    def test_local_regon_checksum(self):
+        self.assertEqual(local_regon_checksum([1, 2, 3, 4, 5, 6, 7, 8, 5, 1, 2, 3, 4]), 7)
+        self.assertEqual(local_regon_checksum([6, 1, 1, 9, 4, 8, 8, 3, 2, 7, 5, 8, 0]), 3)
+        self.assertEqual(local_regon_checksum([8, 9, 2, 0, 0, 3, 6, 6, 0, 7, 0, 3, 2]), 3)
+        self.assertEqual(local_regon_checksum([3, 5, 7, 7, 1, 0, 2, 2, 2, 5, 4, 3, 3]), 0)
+        self.assertEqual(local_regon_checksum([9, 3, 5, 3, 1, 1, 0, 1, 2, 4, 8, 8, 2]), 1)
+
+    def test_local_regon(self):
+        for _ in range(100):
+            self.assertTrue(re.search(r'^\d{14}$', self.factory.local_regon()))
+
+    def test_company_vat_checksum(self):
+        self.assertEqual(company_vat_checksum([7, 7, 5, 7, 7, 7, 6, 0, 5]), 9)
+        self.assertEqual(company_vat_checksum([1, 8, 6, 5, 4, 9, 9, 6, 4]), 2)
+        self.assertEqual(company_vat_checksum([7, 1, 2, 8, 9, 2, 4, 9, 9]), 7)
+        self.assertEqual(company_vat_checksum([3, 5, 4, 6, 1, 0, 6, 5, 8]), 4)
+        self.assertEqual(company_vat_checksum([3, 1, 9, 5, 5, 7, 0, 4, 5]), 0)
+
+    def test_company_vat(self):
+        for _ in range(100):
+            self.assertTrue(re.search(r'^\d{10}$', self.factory.company_vat()))

@@ -3,6 +3,24 @@ from __future__ import unicode_literals
 from .. import Provider as PersonProvider
 
 
+def checksum_identity_card_number(characters):
+    """
+    Calculates and returns a control digit for given list of characters basing on Identity Card Number standards.
+    """
+    weights_for_check_digit = [7, 3, 1, 0, 7, 3, 1, 7, 3]
+    check_digit = 0
+
+    for i in range(3):
+        check_digit += weights_for_check_digit[i] * (ord(characters[i]) - 55)
+
+    for i in range(4, 9):
+        check_digit += weights_for_check_digit[i] * characters[i]
+
+    check_digit %= 10
+
+    return check_digit
+
+
 class Provider(PersonProvider):
     formats = (
         '{{first_name}} {{last_name}}',
@@ -524,6 +542,30 @@ class Provider(PersonProvider):
 
     first_names = first_names_male + first_names_female
 
-    @classmethod
-    def last_name(cls):
-        return cls.random_element(cls.unisex_last_names)
+    def last_name(self):
+        return self.random_element(self.unisex_last_names)
+
+    def identity_card_number(self):
+        """
+        Returns 9 character Polish Identity Card Number,
+        Polish: Numer Dowodu Osobistego.
+
+        The card number consists of 3 letters followed by 6 digits (for example, ABA300000),
+        of which the first digit (at position 3) is the check digit.
+
+        https://en.wikipedia.org/wiki/Polish_identity_card
+        """
+        identity = []
+
+        for _ in range(3):
+            identity.append(self.random_letter().upper())
+
+        # it will be overwritten by a checksum
+        identity.append(0)
+
+        for _ in range(5):
+            identity.append(self.random_digit())
+
+        identity[3] = checksum_identity_card_number(identity)
+
+        return ''.join(str(character) for character in identity)

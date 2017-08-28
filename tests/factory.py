@@ -13,9 +13,12 @@ try:
 except ImportError:  # pragma: no cover
     from io import StringIO
 
+
 from faker import Generator, Faker
-from faker.generator import random
+
+from faker.generator import mod_random as random
 from faker.utils import text, decorators
+
 from . import string_types
 
 
@@ -56,7 +59,7 @@ class FactoryTestCase(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             # Cause all warnings to always be triggered.
             warnings.simplefilter("always")
-            # Trigger a warning.
+            # Shoulnd't trigger any warning.
             Faker()
 
             self.assertEqual(len(w), 0)
@@ -75,8 +78,18 @@ class FactoryTestCase(unittest.TestCase):
                          self.generator.get_formatter('foo_formatter'))
 
     def test_get_formatter_throws_exception_on_incorrect_formatter(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as exc:
             self.generator.get_formatter('barFormatter')
+            self.assertEqual(exc.args[0], 'Unknown formatter "barFormatter"')
+
+        faker = Faker('it_IT')
+        with self.assertRaises(AttributeError) as exc:
+            faker.get_formatter('barFormatter')
+            self.assertEqual(exc.args[0], 'Unknown formatter "barFormatter" with locale "it_IT"')
+
+    def test_invalid_locale(self):
+        with self.assertRaises(AttributeError):
+            Faker('foo_Bar')
 
     def test_format_calls_formatter_on_provider(self):
         self.assertEqual('foobar', self.generator.format('foo_formatter'))
@@ -175,7 +188,7 @@ class FactoryTestCase(unittest.TestCase):
 
     def test_random_element(self):
         from faker.providers import BaseProvider
-        provider = BaseProvider(None)
+        provider = BaseProvider(self.generator)
 
         choices = ('a', 'b', 'c', 'd')
         pick = provider.random_element(choices)
@@ -191,45 +204,49 @@ class FactoryTestCase(unittest.TestCase):
 
     def test_binary(self):
         from faker.providers.misc import Provider
+        provider = Provider(self.generator)
 
         for _ in range(999):
             length = random.randint(0, 2 ** 10)
-            binary = Provider.binary(length)
+            binary = provider.binary(length)
 
             self.assertTrue(isinstance(binary, (bytes, bytearray)))
             self.assertTrue(len(binary) == length)
 
         for _ in range(999):
             self.generator.seed(_)
-            binary1 = Provider.binary(_)
+            binary1 = provider.binary(_)
             self.generator.seed(_)
-            binary2 = Provider.binary(_)
+            binary2 = provider.binary(_)
 
             self.assertTrue(binary1 == binary2)
 
     def test_language_code(self):
         from faker.providers.misc import Provider
+        provider = Provider(self.generator)
 
         for _ in range(99):
-            language_code = Provider.language_code()
+            language_code = provider.language_code()
             self.assertTrue(isinstance(language_code, string_types))
             self.assertTrue(re.match(r'^[a-z]{2,3}$', language_code))
 
     def test_locale(self):
         from faker.providers.misc import Provider
+        provider = Provider(self.generator)
 
         for _ in range(99):
-            locale = Provider.locale()
+            locale = provider.locale()
             self.assertTrue(re.match(r'^[a-z]{2,3}_[A-Z]{2}$', locale))
 
     def test_password(self):
         from faker.providers.misc import Provider
+        provider = Provider(self.generator)
 
         def in_string(char, _str):
             return char in _str
 
         for _ in range(999):
-            password = Provider.password()
+            password = provider.password()
 
             self.assertTrue(any([in_string(char, password) for char in "!@#$%^&*()_+"]))
             self.assertTrue(any([in_string(char, password) for char in string.digits]))
@@ -237,7 +254,7 @@ class FactoryTestCase(unittest.TestCase):
             self.assertTrue(any([in_string(char, password) for char in string.ascii_lowercase]))
 
         with self.assertRaises(AssertionError):
-            Provider.password(length=2)
+            provider.password(length=2)
 
     def test_prefix_suffix_always_string(self):
         # Locales known to contain `*_male` and `*_female`.
@@ -250,7 +267,7 @@ class FactoryTestCase(unittest.TestCase):
     def test_no_words_sentence(self):
         from faker.providers.lorem import Provider
 
-        provider = Provider(None)
+        provider = Provider(self.generator)
 
         paragraph = provider.paragraph(0)
         self.assertEqual(paragraph, '')
@@ -262,7 +279,7 @@ class FactoryTestCase(unittest.TestCase):
     def test_no_words_paragraph(self):
         from faker.providers.lorem import Provider
 
-        provider = Provider(None)
+        provider = Provider(self.generator)
 
         sentence = provider.sentence(0)
         self.assertEqual(sentence, '')
@@ -285,7 +302,7 @@ class FactoryTestCase(unittest.TestCase):
 
     def test_random_pystr_characters(self):
         from faker.providers.python import Provider
-        provider = Provider(None)
+        provider = Provider(self.generator)
 
         characters = provider.pystr()
         self.assertEqual(len(characters), 20)
@@ -300,7 +317,7 @@ class FactoryTestCase(unittest.TestCase):
 
     def test_random_pyfloat(self):
         from faker.providers.python import Provider
-        provider = Provider(None)
+        provider = Provider(self.generator)
 
         self.assertTrue(0 <= abs(provider.pyfloat(left_digits=1)) < 10)
         self.assertTrue(0 <= abs(provider.pyfloat(left_digits=0)) < 1)
@@ -314,7 +331,7 @@ class FactoryTestCase(unittest.TestCase):
     def test_us_ssn_valid(self):
         from faker.providers.ssn.en_US import Provider
 
-        provider = Provider(None)
+        provider = Provider(self.generator)
         for i in range(1000):
             ssn = provider.ssn()
             self.assertEqual(len(ssn), 11)
@@ -325,9 +342,8 @@ class FactoryTestCase(unittest.TestCase):
             self.assertNotEqual(ssn[7:11], '0000')
 
     def test_nl_BE_ssn_valid(self):
-        from faker.providers.ssn.nl_BE import Provider
-
-        provider = Provider(None)
+        import faker
+        provider = faker.Faker('nl_BE').provider('faker.providers.ssn')
 
         for i in range (1000):
             ssn = provider.ssn()
@@ -363,7 +379,7 @@ class FactoryTestCase(unittest.TestCase):
     def test_ipv4(self):
         from faker.providers.internet import Provider
 
-        provider = Provider(None)
+        provider = Provider(self.generator)
 
         for _ in range(999):
             address = provider.ipv4()
@@ -382,7 +398,7 @@ class FactoryTestCase(unittest.TestCase):
     def test_ipv6(self):
         from faker.providers.internet import Provider
 
-        provider = Provider(None)
+        provider = Provider(self.generator)
 
         for _ in range(999):
             address = provider.ipv6()
@@ -401,7 +417,7 @@ class FactoryTestCase(unittest.TestCase):
 
     def test_random_sample_unique(self):
         from faker.providers import BaseProvider
-        provider = BaseProvider(None)
+        provider = BaseProvider(self.generator)
 
         sample = provider.random_sample_unique('abcde', 3)
         self.assertEqual(len(sample), 3)
@@ -426,7 +442,7 @@ class FactoryTestCase(unittest.TestCase):
 
     def test_random_number(self):
         from faker.providers import BaseProvider
-        provider = BaseProvider
+        provider = BaseProvider(self.generator)
 
         number = provider.random_number(10, True)
         self.assertEqual(len(str(number)), 10)

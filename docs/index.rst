@@ -103,8 +103,9 @@ default en\_US locale.
 
 .. code:: python
 
-    from faker import Fakery
-    fake = Fakery('it_IT')
+    from faker import Faker
+    fake = Faker('it_IT')
+
     for _ in range(0, 10):
         print fake.name()
 

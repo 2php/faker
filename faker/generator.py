@@ -7,7 +7,7 @@ import random
 
 
 _re_token = re.compile(r'\{\{(\s?)(\w+)(\s?)\}\}')
-random = random.Random()
+mod_random = random.Random()
 
 
 class Generator(object):
@@ -18,6 +18,7 @@ class Generator(object):
         self.providers = []
         self.__config = dict(
             list(self.__config.items()) + list(config.items()))
+        self.__random = mod_random
 
     def add_provider(self, provider):
 
@@ -52,11 +53,18 @@ class Generator(object):
 
     @property
     def random(self):
-        return random
+        return self.__random
 
-    def seed(self, seed=None):
+    def seed_instance(self, seed=None):
         """Calls random.seed"""
-        random.seed(seed)
+        if self.__random == mod_random:
+            # create per-instance random obj when first time seed_instance() is called
+            self.__random = random.Random()
+        self.__random.seed(seed)
+
+    @classmethod
+    def seed(cls, seed=None):
+        mod_random.seed(seed)
 
     def format(self, formatter, *args, **kwargs):
         """
@@ -69,7 +77,15 @@ class Generator(object):
         try:
             return getattr(self, formatter)
         except AttributeError:
-            raise AttributeError('Unknown formatter "{0}"'.format(formatter))
+            if 'locale' in self.__config:
+                msg = 'Unknown formatter "{0}" with locale "{1}"'.format(
+                    formatter, self.__config['locale']
+                )
+            else:
+                raise AttributeError('Unknown formatter "{0}"'.format(
+                    formatter
+                ))
+            raise AttributeError(msg)
 
     def set_formatter(self, name, method):
         """
